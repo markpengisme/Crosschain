@@ -1,0 +1,74 @@
+{
+	"info": {
+		"_postman_id": "7d43159f-8c69-448a-9a2d-eecc0f326e02",
+		"name": "cross-chain",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "http://127.0.0.1:3001/careCenter/requestInfo",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"info\":{\n\t\t\"staffName\": \"Mark\",\n\t\t\"staffId\": \"1\",\n\t\t\"patientName\": \"Peng\",\n\t\t\"patientId\": \"9527\",\n\t\t\"source\": \"CareCenter One\",\n\t\t\"destination\": \"Hospital One\"\n\t}\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:3001/careCenter/requestInfo",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3001",
+					"path": [
+						"careCenter",
+						"requestInfo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://127.0.0.1:3012/hospital/responseInfo",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"info\":{\n\t\t\"staffName\": \"Mark\",\n\t\t\"staffId\": \"1\",\n\t\t\"patientName\": \"Peng\",\n\t\t\"patientId\": \"9527\",\n\t\t\"source\": \"Hospital One\",\n\t\t\"destination\": \"CareCenter One\",\n\t\t\"phr\": \"Healthy\"\n\t}\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:3012/hospital/responseInfo",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "3012",
+					"path": [
+						"hospital",
+						"responseInfo"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}

@@ -1,0 +1,62 @@
+{
+  "network": {
+    "name": "CareCenter",
+    "verbosity": 5,
+    "consensus": "raft",
+    "quorumVersion": "2.6.0",
+    "transactionManager": "none",
+    "permissioned": true,
+    "genesisFile": "none",
+    "generateKeys": true,
+    "configDir": "network/CareCenter/resources",
+    "deployment": "bash",
+    "cakeshop": "0.11.0-J8",
+    "networkId": "7545",
+    "customizePorts": true,
+    "cakeshopPort": "9001",
+    "remoteDebug": false
+  },
+  "nodes": [
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "21000",
+        "rpcPort": "22000",
+        "wsPort": "23000",
+        "graphQlPort": "24000",
+        "raftPort": "50401"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "21001",
+        "rpcPort": "22001",
+        "wsPort": "23001",
+        "graphQlPort": "24001",
+        "raftPort": "50402"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "21002",
+        "rpcPort": "22002",
+        "wsPort": "23002",
+        "graphQlPort": "24002",
+        "raftPort": "50403"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "21003",
+        "rpcPort": "22003",
+        "wsPort": "23003",
+        "graphQlPort": "24003",
+        "raftPort": "50404"
+      }
+    }
+  ],
+  "containerPorts": {}
+}

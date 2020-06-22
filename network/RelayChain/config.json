@@ -1,0 +1,62 @@
+{
+  "network": {
+    "name": "RelayChain",
+    "verbosity": 5,
+    "consensus": "raft",
+    "quorumVersion": "2.6.0",
+    "transactionManager": "none",
+    "permissioned": true,
+    "genesisFile": "none",
+    "generateKeys": true,
+    "configDir": "network/RelayChain/resources",
+    "deployment": "bash",
+    "cakeshop": "0.11.0-J8",
+    "networkId": "8545",
+    "customizePorts": true,
+    "cakeshopPort": "9002",
+    "remoteDebug": false
+  },
+  "nodes": [
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "31000",
+        "rpcPort": "32000",
+        "wsPort": "33000",
+        "graphQlPort": "34000",
+        "raftPort": "50405"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "31001",
+        "rpcPort": "32001",
+        "wsPort": "33001",
+        "graphQlPort": "34001",
+        "raftPort": "50406"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "31002",
+        "rpcPort": "32002",
+        "wsPort": "33002",
+        "graphQlPort": "34002",
+        "raftPort": "50407"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "31003",
+        "rpcPort": "32003",
+        "wsPort": "33003",
+        "graphQlPort": "34003",
+        "raftPort": "50408"
+      }
+    }
+  ],
+  "containerPorts": {}
+}

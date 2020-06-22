@@ -1,0 +1,62 @@
+{
+  "network": {
+    "name": "Hospital",
+    "verbosity": 5,
+    "consensus": "raft",
+    "quorumVersion": "2.6.0",
+    "transactionManager": "none",
+    "permissioned": true,
+    "genesisFile": "none",
+    "generateKeys": true,
+    "configDir": "network/Hospital/resources",
+    "deployment": "bash",
+    "cakeshop": "0.11.0-J8",
+    "networkId": "9545",
+    "customizePorts": true,
+    "cakeshopPort": "9003",
+    "remoteDebug": false
+  },
+  "nodes": [
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "41000",
+        "rpcPort": "42000",
+        "wsPort": "43000",
+        "graphQlPort": "44000",
+        "raftPort": "50409"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "41001",
+        "rpcPort": "42001",
+        "wsPort": "43001",
+        "graphQlPort": "44001",
+        "raftPort": "50410"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "41002",
+        "rpcPort": "42002",
+        "wsPort": "43002",
+        "graphQlPort": "44002",
+        "raftPort": "50411"
+      }
+    },
+    {
+      "quorum": {
+        "ip": "127.0.0.1",
+        "devP2pPort": "41003",
+        "rpcPort": "42003",
+        "wsPort": "43003",
+        "graphQlPort": "44003",
+        "raftPort": "50412"
+      }
+    }
+  ],
+  "containerPorts": {}
+}
