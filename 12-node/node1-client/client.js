@@ -6,46 +6,69 @@ const bodyParser = require('body-parser');
 const config = require("./config.js");
 
 // read contract build & 合約ABI & 合約Address
-const compiled = JSON.parse(fs.readFileSync('./contracts/' + config.contractName + '.json', 'UTF-8'));
-const careCenterContractABI = compiled.abi;
-const careCenterContractAddress = compiled.contractAddress;
+let contracts = [];
+config.contractNames.forEach( contractName => {
+    const compiled = JSON.parse(fs.readFileSync('./contracts/' + contractName + '.json', 'UTF-8'));
+    contracts.push(
+        {
+            "name": contractName,
+            "abi": compiled.abi,
+            "address": compiled.contractAddress
+        }
+    )
+});
 
-// chainID, address, careCenter Name, total bridge
-const chainID = config.chainID;
+// Name, IP, Address, chainID, port
+const myName = config.myName;
+const myIP = config.myIP;
 const myAccountAddress = config.myAccountAddress;
-const myCareCenterName = config.myCareCenterName;
-const careCenterChainNodeNum = config.careCenterChainNodeNum;
-
-// IP, port, req-API
-const myNode = config.myNode;
-const myNodeApiPort = config.myNodeApiPort;
-const myNodeReqApiPath = config.myNodeReqApiPath;
+const myChainID = config.myChainID;
+const myPort = config.myPort;
 
 // web3 & contract instance
     // http: send transaction
     // ws: listen event
-const careCenterWeb3Http = new web3(config.web3HttpProvider);
-const careCenterContractHttp = new careCenterWeb3Http.eth.Contract(careCenterContractABI, careCenterContractAddress);
-const careCenterWeb3Ws = new web3(config.web3WsProvider);
-const careCenterContractWs = new careCenterWeb3Ws.eth.Contract(careCenterContractABI, careCenterContractAddress);
+const http = new web3(config.web3HttpProvider);
+const ws = new web3(config.web3WsProvider);
+const sendInfoContractHttp = new http.eth.Contract(contracts[0].abi, contracts[0].address);
+const sendInfoContractWs = new ws.eth.Contract(contracts[0].abi, contracts[0].address);
+const bridgeNodeContractHttp = new http.eth.Contract(contracts[1].abi, contracts[1].address);
+const bridgeNodeContractWs = new ws.eth.Contract(contracts[1].abi, contracts[1].address);
+
+async function namingService(name)
+{   
+    let chainID;
+    await bridgeNodeContractHttp.methods.namingService(name)
+    .call({from: myAccountAddress})
+    .then(function(result) {
+        chainID = result;
+    });
+    return chainID;
+}
+async function oneBridgeNode(ts, myChainID)
+{
+    let node;
+    await bridgeNodeContractHttp.methods.oneBridgeNode(ts, myChainID)
+    .call({from: myAccountAddress})
+    .then(function(result) {
+        node = result;  
+    });
+    return node;
+}
 
 // 開始監聽合約事件
 console.log('start to listen!');
-
-// 回覆跨鏈請求 by listen contract event -> call API
-careCenterContractWs.events.responseEvent({}, function (error, result) {
+// 跨鏈回覆 by listen contract event -> call gateway server API
+sendInfoContractWs.events.infoEvent({}, function (error, result) {
     if (error === null) {
         // 監聽器拿到資料
-        let info = result.returnValues.info;
-        info = JSON.parse(info);
-        console.log('**********  Response  **********');
+        let data = result.returnValues.data;
+        data = JSON.parse(data);
         console.log('Listen to event successfully!');
-        
-        // 拿到的照護中心名字剛好是自己的照護中心名字,代表該工作
-        if (info['destination'] === myCareCenterName) {
-            console.log(myCareCenterName, "終於拿到資料...:", info);
-            // TODO: 轉發資料給自己的的Resource Server
-           
+
+        // 拿到的照護中心名字剛好是自己照護中心的名字,代表該工作
+        if (data['destination'] === myName) {
+            console.log(myName, "終於拿到資料...:", data);
         } else {
             console.log('不是我該做的....')
         }
@@ -54,24 +77,22 @@ careCenterContractWs.events.responseEvent({}, function (error, result) {
     }
 });
 
-// 接受跨鏈請求 by API -> send contract
 router = express.Router();
-router.post(myNodeReqApiPath, function (req, res, next) {
+// 跨鏈請求 by API -> send contract
+router.post("/", async function (req, res, next) {
     try{
-        const info = req.body.info;
-        if (info == undefined){throw "Error:info == undefined";}
-        const workerNode = Math.floor(Math.random() * careCenterChainNodeNum + 1);
-        const node = {'workerNode': workerNode};
-        let data = {info: info, node: node};
-        data = JSON.stringify(data); // 傳入區塊鏈前 stringify
-
-        /* 跨鏈呼叫合約 */
-        careCenterContractHttp.methods.requestInfo(data)
+        let data = req.body;
+        if (data == undefined){throw "Error:data == undefined";}
+        const workerNode = await oneBridgeNode(Date.now().toString(), myChainID);
+        data.workerNode = workerNode.accAddress;
+        
+        console.log("Call Contract!")
+        sendInfoContractHttp.methods.sendInfo(JSON.stringify(data))
         .send({from: myAccountAddress})
-        .then(function (result) {
-            console.log('**********  Request  **********');
-            console.log(JSON.parse(data));
-            console.log('Send to contract successfully!');
+        .then(function(result) {
+            console.log("Send to contract successfully!");
+            console.log("TX:", result.transactionHash);
+            console.log(data);
             res.json({'message': 'success'});
         })
     } catch (error){
@@ -84,8 +105,7 @@ router.post(myNodeReqApiPath, function (req, res, next) {
 const app = express();
 app.use(bodyParser.json());
 app.use(router);
-app.listen(myNodeApiPort, function () {
-    console.log('Express app started:', myNode);
-    console.log('CareCenter Name:', myCareCenterName);
-    console.log('Request Health Data API:', myNodeReqApiPath);
+app.listen(myPort, function () {
+    console.log('Express app started:', myIP);
+    console.log('CareCenter Name:', myName);
 });

@@ -6,13 +6,13 @@
 	},
 	"item": [
 		{
-			"name": "http://127.0.0.1:3001/careCenter/requestInfo",
+			"name": "Request data",
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"info\":{\n\t\t\"staffName\": \"Mark\",\n\t\t\"staffId\": \"1\",\n\t\t\"patientName\": \"Peng\",\n\t\t\"patientId\": \"9527\",\n\t\t\"source\": \"CareCenter One\",\n\t\t\"destination\": \"Hospital One\"\n\t}\n}",
+					"raw": "{\n\t\"method\": \"Request data\",\n\t\"info\":{\n\t\t\"staffName\": \"Mark\",\n\t\t\"staffId\": \"1\",\n\t\t\"patientName\": \"Peng\",\n\t\t\"patientId\": \"9527\"\n\t},\n\t\"source\": \"CareCenter-One\",\n\t\"destination\": \"Hospital-One\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -20,7 +20,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://127.0.0.1:3001/careCenter/requestInfo",
+					"raw": "http://127.0.0.1:3001/",
 					"protocol": "http",
 					"host": [
 						"127",
@@ -30,21 +30,20 @@
 					],
 					"port": "3001",
 					"path": [
-						"careCenter",
-						"requestInfo"
+						""
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "http://127.0.0.1:3012/hospital/responseInfo",
+			"name": "Response data",
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"info\":{\n\t\t\"staffName\": \"Mark\",\n\t\t\"staffId\": \"1\",\n\t\t\"patientName\": \"Peng\",\n\t\t\"patientId\": \"9527\",\n\t\t\"source\": \"Hospital One\",\n\t\t\"destination\": \"CareCenter One\",\n\t\t\"phr\": \"Healthy\"\n\t}\n}",
+					"raw": "{\n\t\"method\": \"Response data\",\n\t\"info\":{\n\t\t\"staffName\": \"Mark\",\n\t\t\"staffId\": \"1\",\n\t\t\"patientName\": \"Peng\",\n\t\t\"patientId\": \"9527\",\n\t\t\"Health\": \"Good\"\n\t},\n\t\"source\": \"Hospital-One\",\n\t\"destination\": \"CareCenter-One\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -52,7 +51,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://127.0.0.1:3012/hospital/responseInfo",
+					"raw": "http://127.0.0.1:3012",
 					"protocol": "http",
 					"host": [
 						"127",
@@ -60,11 +59,7 @@
 						"0",
 						"1"
 					],
-					"port": "3012",
-					"path": [
-						"hospital",
-						"responseInfo"
-					]
+					"port": "3012"
 				}
 			},
 			"response": []
