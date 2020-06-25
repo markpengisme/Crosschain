@@ -4,6 +4,7 @@ const request = require('request');
 const express = require('express');
 const bodyParser = require('body-parser');
 const config = require("./config.js");
+const SecureChannel = require("./ecdh.js");
 
 // read contract build & 合約ABI & 合約Address
 let contracts = [];
@@ -25,6 +26,7 @@ const myAccountAddress = config.myAccountAddress;
 const myChainID = config.myChainID;
 const myPort = config.myPort;
 const relayChainID = config.relayChainID;
+sc = new SecureChannel(myAccountAddress, myIP);
 
 // web3 & contract instance
     // http: send transaction
@@ -59,9 +61,16 @@ sendInfoContractWs.events.infoEvent({}, async function (error, result) {
         
         // 拿到的節點編號剛好是自己的節點編號,代表該工作
         if (data['workerNode'] === myAccountAddress) {
+            console.log("Get a job");
             const workerNode = await oneBridgeNode(Date.now().toString(), relayChainID);
             data.workerNode = workerNode.accAddress;
-            console.log("workerNode:", data.workerNode);
+            console.log("Relay chain workerNode:", data.workerNode);
+
+            // 加密
+            let ok = await sc.checkStatus(workerNode.accAddress, workerNode.ip);
+            if(!ok){await sc.buildSecureChannel(workerNode.accAddress, workerNode.ip)}
+            data = sc.encrypt(workerNode.accAddress, JSON.stringify(data))
+            data = {"data":data, "myAccountAddress": myAccountAddress}
 
             // 將資料轉發給relayChain的橋接節點
             request({
@@ -76,9 +85,9 @@ sendInfoContractWs.events.infoEvent({}, async function (error, result) {
                 // callback回來確認是否成功轉送給relayChain的橋接節點
                 function (error, response, body) {
                     if (error) {
-                        console.log('Send to relaychain bridgenode failed:', error);
+                        console.log('Send to relaychain bridgenode failed:', error, "\n");
                     } else {
-                        console.log('Send to relaychain bridgenode successfully! Server responded with:', body);
+                        console.log('Send to relaychain bridgenode successfully! Server responded with:', body, "\n");
                     }
                 })
         } else {
@@ -93,7 +102,10 @@ router = express.Router();
 // 跨鏈回覆 by API -> send contract
 router.post("/", function (req, res, next) {
     try{
-        let data = req.body;
+        // 解密
+        let body = req.body;
+        let data = JSON.parse(sc.decrypt(body.myAccountAddress, body.data));
+
         if (data == undefined){throw "Error:data == undefined";}
         delete data.workerNode;
 
@@ -103,9 +115,42 @@ router.post("/", function (req, res, next) {
         .then(function (result) {
             console.log("Send to contract successfully!");
             console.log("TX: ", result.transactionHash);
-            console.log(data);
+            console.log(data, "\n");
             res.json({'message': 'success'});
         });
+    } catch (error){
+        console.log(error);
+        res.json({'message': 'fail'});
+    }
+});
+
+router.post("/keyExchangeInit", function (req, res, next) {
+    try{
+        let data = req.body;
+        data = sc.keyExchangeInitRes(data.myAddress, data.myIP, data.myPK);
+        res.json(data);    
+    } catch (error){
+        console.log(error);
+        res.json({'message': 'fail'});
+    }
+});
+
+router.post("/keyExchangeFinal", function (req, res, next) {
+    try{
+        let data = req.body;
+        data = sc.keyExchangeFinalRes(data.myAddress, data.myIP);
+        res.json(data);
+    } catch (error){
+        console.log(error);
+        res.json({'message': 'fail'});
+    }
+});
+
+router.post("/keyExchangeChallenge", function (req, res, next) {
+    try{
+        let data = req.body;
+        data = sc.keyExchangeChallengeRes(data.myAddress, data.myIP, data.encrypted);
+        res.json(data);
     } catch (error){
         console.log(error);
         res.json({'message': 'fail'});
@@ -117,6 +162,6 @@ app.use(bodyParser.json());
 app.use(router);
 app.listen(myPort, function () {
     console.log('Express app started:', myIP);
-    console.log('CareCenter Name:', myName);
+    console.log('CareCenter name:', myName, '\n');
 });
 

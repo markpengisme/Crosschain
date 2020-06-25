@@ -58,9 +58,9 @@ sendInfoContractWs.events.infoEvent({}, function (error, result) {
 
         // 拿到的醫院名字剛好是自己的醫院名字,代表該工作
         if (data['destination'] === myName) {
-            console.log(myName, "終於拿到資料...:", data);
+            console.log(myName, ",Finally get it:", data);
         } else {
-            console.log('不是我該做的....')
+            console.log('Not my job....\n');
         }
     } else {
         console.log('listen error:', error)
@@ -96,5 +96,5 @@ app.use(bodyParser.json());
 app.use(router);
 app.listen(myPort, function () {
     console.log('Express app started:', myIP);
-    console.log('Hospital Name:', myName);
+    console.log('Hospital Name:', myName, '\n');
 });
