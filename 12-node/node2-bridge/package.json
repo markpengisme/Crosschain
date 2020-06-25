@@ -10,8 +10,10 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.19.0",
+    "crypto": "^1.0.1",
     "express": "^4.17.1",
     "fs": "0.0.1-security",
+    "hashmap": "^2.4.0",
     "quorum-js": "^0.3.5",
     "request": "^2.88.2",
     "solc": "^0.4.26",

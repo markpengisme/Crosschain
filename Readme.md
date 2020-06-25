@@ -1,6 +1,7 @@
-# 子三 - v2.0
+# 子三 - v2.1
 
 ## How to use?
+
 1. Clone this repo in your computer.
 2. Use [quorum-wizard](https://github.com/jpmorganchase/quorum-wizard) set up 3 blockchains(CareCenter, RelayChain, Hospital), and arrange ports according to `config.json`.
 	- `Crosschain/network/CareCenter/config.json`
@@ -17,21 +18,44 @@
 
 ## Notice
 
-- quorum(raft) + web3js.websocket = still bug(timestamp nanoseconds bug) -> [issue](https://github.com/ethereum/web3.js/issues/3442)
-
+- quorum(raft) + web3js.websocket = still bug(timestamp nanoseconds bug) -> [issue](https://github.com/ethereum/web3.js/issues/3442) -> Use two provider to avoid this issue.
+	- HTTP: call and send contract
+	- Websocket: subscribe event
 - Compile two way
-    1. Use compile.js
-    2. Use remix + quorum plugin 
-- After compile `.sol` file, you ==must to== give `CONTRACT.JSON` for other node , because they need the `ABI` and the `Contract address`.
-- Bridge Node (if the node in same chain, only `config.js` is different)
-    - node2 = node3 = node4 
-    - node5 = node6 = node7 = node8
-    - node9 = node10 = node11
+	1. Use compile.js
+	2. Use remix + quorum plugin 
+- After compile `.sol` file, you ==must to== give `CONTRACT.JSON` for other node , because they need the `ABI` and the `Contract address`, the `tool.sh` do this.
+- Bridge Node, if the node in same chain, only `config.js` is different, and `bridge.js` of the each childchain has only the difference of the console text, the function is the same.
+	- node2 = node3 = node4 (ChildChain-1)
+	- node5 = node6 = node7 = node8 (RelayChain)
+	- node9 = node10 = node11 (ChildChain-2)
+	- ChildChain-1 ~= ChildChain-2
 - Client Node
-    - node1 ~= node12
+   - node1 ~= node12
+- Secure channel can setting two mode in constructor function
+	- Rebuild every communication
+	- Build and store for an hour
+
+## Versions
+
+- V1.0
+	- Prototype
+	- Request and response flow
+- V2.0
+	- Smart contract
+		- Naming Service, mapping name => chainID
+		- Register/Remove bridge node
+		- Random select bridge node by chainID
+	- Node.js
+		- More general approach to replace api path
+- V2.1
+	- Secure channel
+		- A secure channel between the bridge nodes of two different chains(ECDH(secp256k1) -> AES(aes-256-cbc))
 
 ## Future Tasks
+
 - More Secure channels
-	- ECDH and check ip
+	- Check request ip
+- Refactor code to OOP
 - Dynamic Deploy Bridge nodes
 	- k8s stafulset
