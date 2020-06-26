@@ -9,14 +9,14 @@ const bridgeNodeContractHttp = new http.eth.Contract(compiled.abi,compiled.contr
 const myAccountAddress = config.myAccountAddress;
 (async () => {
     try{
-        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-One", "http://localhost:3005", "0x6ca59ef72aea163bcd87239edb673fb0293d4e40", "8545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Two", "http://localhost:3006", "0x0e66d201fbc294d0163b26153e32a050bc4be92e", "8545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Three", "http://localhost:3007", "0xc17be0b0812eb0d05ec44d6e154267fe481fb1d0", "8545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Four", "http://localhost:3008", "0x6287b6af7454f63dabdacf68bd76d2936e242f51", "8545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-One", "http://localhost:3005", "0xb6b724877f84a630a0a9bff1aa4093b1acb37316", "8545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Two", "http://localhost:3006", "0x1f33e7167f2938d80408f4c3d3507c927877b350", "8545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Three", "http://localhost:3007", "0x89326c9b03e4ebee6fadcad18c8e98a4e7033f8c", "8545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Four", "http://localhost:3008", "0x18e6b9f7d93ebd4d46ad993638a2a51c3d8d168b", "8545").send({from: myAccountAddress});
 
-        await bridgeNodeContractHttp.methods.registerBridgeNode("Hospital-BridgeNode-One", "http://localhost:3009", "0xaa2abfeb6d776492cf49746de955127e71025909", "9545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("Hospital-BridgeNode-Two", "http://localhost:3010", "0x8bf842ad24254af5d39a913cc87238f4b3510dda", "9545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("Hospital-BridgeNode-Three", "http://localhost:3011", "0xb9bbbe1a010a4bb4b288b428e40ce72cc233d750", "9545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("Hospital-BridgeNode-One", "http://localhost:3009", "0x95c0abb132fef71d6351cfde3daecc06b5f14d08", "9545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("Hospital-BridgeNode-Two", "http://localhost:3010", "0xfe98d6e761e11e9752b08c655910256899bf366a", "9545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("Hospital-BridgeNode-Three", "http://localhost:3011", "0x21d4935c9bc94b4cf5b87555e0eaf767c66f77fd", "9545").send({from: myAccountAddress});
         console.log("Initiate success");
     } catch (error){
         console.log(error);

@@ -2,3 +2,9 @@
 build/
 node_modules/
 package-lock.json
+
+/network/CareCenter/*
+/network/Hospital/*
+/network/RelayChain/*
+!/network/*/config.json
+network.zip
