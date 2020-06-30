@@ -5,9 +5,10 @@ const crypto = require('crypto');
 const bodyParser = require('body-parser');
 
 class SecureChannel {
-    constructor(address, ip, everytime = true) {
+    constructor(address, ip, apiPort, everytime = true) {
         this.address = address;
         this.ip = ip;
+        this.apiPort = apiPort;
         this.map = new hashMap();
         /*{
           stage: 'init' -> 'final' -> 'ok'
@@ -17,15 +18,34 @@ class SecureChannel {
           secret: session key
           pov: period of validity
         }*/
+        this.POV_TIME = 60*60*1000;
         this.ECDH_CURVE = "secp256k1";
         this.AES_ALG = "aes-256-cbc";
-        this.hash = crypto.createHash('sha256');
         this.iv = "1234567812345678";
+        this.salt = "NTUSTNTUSTNTUST!";
         this.BUILD_SECURE_CHANNEL_EVERYTIME = everytime;
 
     }
 
-    async checkStatus(cpAddress, cpIP) {
+    checkHash(data) {
+        let hash = data.hash;
+        delete data.hash;
+        if (hash != crypto.createHash('sha256').update(JSON.stringify(data)+this.salt).copy().digest('hex'))
+        {
+            this.map.set(data.myAddress,{});
+            throw "Hash value is different";
+        } else {
+            console.log("Hash correrct");
+        }
+    }
+    checkTS(data) {
+        if ( parseInt(data.TS)+3000 < Date.now())
+        {
+            throw "Too long time";
+        }
+    }
+    
+    async checkStatus(cpAddress, cpIP, cpApiPort) {
         let body;
         let status = this.map.get(cpAddress);
         if( this.BUILD_SECURE_CHANNEL_EVERYTIME = false &&
@@ -34,10 +54,10 @@ class SecureChannel {
         {
             console.log('--------------------------');
             console.log("Secure channel is open => Challenge");
-            body = await this.keyExchangeChallengeReq(cpAddress, cpIP);
+            body = await this.keyExchangeChallengeReq(cpAddress, cpIP, cpApiPort);
         } else {
             console.log("No secure channel, or expired => Build new one");
-            body = await this.buildSecureChannel(cpAddress, cpIP);
+            body = await this.buildSecureChannel(cpAddress, cpIP, cpApiPort);
         }
         return body.message != "fail" ? true : false;
     }
@@ -45,6 +65,7 @@ class SecureChannel {
     encrypt (cpAddress, data) {        
         let status = this.map.get(cpAddress);
         let buff = Buffer.from(status.secret, 'hex');
+        if(this.BUILD_SECURE_CHANNEL_EVERYTIME){this.map.set(cpAddress, {});}
         let cipher = crypto.createCipheriv(this.AES_ALG, buff, this.iv)
         let encrypted = cipher.update(data,'utf8','hex')
         encrypted += cipher.final('hex');
@@ -55,6 +76,7 @@ class SecureChannel {
     decrypt (cpAddress, encrypted) {
         let status = this.map.get(cpAddress);
         let buff = Buffer.from(status.secret, 'hex');
+        if(this.BUILD_SECURE_CHANNEL_EVERYTIME){this.map.set(cpAddress, {});}
         let decipher = crypto.createDecipheriv(this.AES_ALG, buff, this.iv)
         let data = decipher.update(encrypted,'hex','utf8')
         data += decipher.final('utf8');
@@ -62,15 +84,14 @@ class SecureChannel {
         return data;
     }
 
-    async keyExchangeInitReq(cpAddress, cpIP){
+    async keyExchangeInitReq(cpAddress, cpIP, cpApiPort){
         let self = this;
         return new Promise(function (resolve, reject) {
             let status = self.map.get(cpAddress);
             let alice = crypto.createECDH(self.ECDH_CURVE);
             alice.generateKeys();
             let PK = alice.getPublicKey('hex');
-            let TS = Date.now() 
-
+            
             status = {
                 "stage": "init",
                 "myCrpto": alice,
@@ -82,14 +103,15 @@ class SecureChannel {
                 "stage": "keyExchangeInit",
                 "myAddress": self.address,
                 "myIP": self.ip,
+                "myApiPort": self.apiPort,
                 "myPK": PK,
-                "TS": TS,
-                "Hash": self.hash.update(PK+TS).copy().digest('hex')
+                "TS": Date.now().toString()
             };
+            data.hash = crypto.createHash('sha256').update(JSON.stringify(data)+self.salt).copy().digest('hex');
 
             request({
                 method: 'POST',
-                uri: cpIP + "/keyExchangeInit",
+                uri: "http://" + cpIP + ":" + cpApiPort + "/keyExchangeInit",
                 json: true,
                 headers: {"content-type": "application/json"},
                 body: data
@@ -97,6 +119,7 @@ class SecureChannel {
                 if (error) {
                     console.log('--------------------------');
                     console.log('KEY_EXCHANGE_INITIATE_REQ:', error);
+                    self.map.set(cpAddress, {});
                     reject(error);
                 } else {
                     console.log('--------------------------');
@@ -107,126 +130,143 @@ class SecureChannel {
         });
     }
 
-    keyExchangeInitRes(cpAddress, cpIP, cpPK){
-        let status = this.map.get(cpAddress);
+    keyExchangeInitRes(cp){
+        this.checkHash(cp);
+        this.checkTS(cp);
+        let status = this.map.get(cp.myAddress);
         let bob = crypto.createECDH(this.ECDH_CURVE);
         bob.generateKeys();
         let PK = bob.getPublicKey('hex');
-        let TS = Date.now();        
 
         status = {
             "stage": "init",
             "myCrpto": bob,
             "myPK": PK,
-            "cpPK": cpPK,
+            "cpPK": cp.myPK,
         };
-        this.map.set(cpAddress, status);
+        this.map.set(cp.myAddress, status);
 
         let data = {
             "stage": "keyExchangeInit",
             "myAddress": this.address,
             "myIP": this.ip,
+            "myApiPort": this.apiPort,
             "myPK": PK,
-            "TS": TS,
-            "Hash": this.hash.update(PK+TS).copy().digest('hex')
+            "TS": Date.now().toString()
         };
+        data.hash = crypto.createHash('sha256').update(JSON.stringify(data)+this.salt).copy().digest('hex');
+
         console.log("Receive a request for a secure channel");
         console.log('--------------------------');
         console.log('KEY_EXCHANGE_INITIATE_RES:', data);
         return data;
     }
 
-    async keyExchangeFinalReq(cpAddress, cpIP, cpPK){
+    async keyExchangeFinalReq(cp){
         let self = this;
         return new Promise(function (resolve, reject) {
-            let status = self.map.get(cpAddress);
-            let secret = status.myCrpto.computeSecret(cpPK, 'hex', 'hex');
+            let status = self.map.get(cp.myAddress);
+            if( !status && status.stage != "init"){throw "stage error";}
+            self.checkHash(cp);
+            self.checkTS(cp);
+            let secret = status.myCrpto.computeSecret(cp.myPK, 'hex', 'hex');
             status["stage"] = "final";
-            status["cpPK"] = cpPK;
+            status["cpPK"] = cp.myPK;
             status["secret"] = secret;
-            self.map.set(cpAddress, status);
-            console.log(secret,"keylen",secret)
+            self.map.set(cp.myAddress, status);
 
             let data = {
                 "stage": "keyExchangeFinal",
                 "myAddress": self.address,
-                "message": "Successfully generate the session key"
+                "message": "Successfully generate the session key",
+                "TS": Date.now().toString()
             };
             
             request({
                 method: 'POST',
-                uri: cpIP+"/keyExchangeFinal",
+                uri: "http://" + cp.myIP + ":" + cp.myApiPort + "/keyExchangeFinal",
                 json: true,
                 headers: {"content-type": "application/json"},
                 body: data
             },
             function (error, response, body) {
                 if (error) {
-                    console.log('\nKEY_EXCHANGE_FINALIZE_REQ:', error);
-                    reject(erroo);
+                    console.log('KEY_EXCHANGE_FINALIZE_REQ:', error);
+                    self.map.set(cp.myAddress, {});
+                    reject(error);
                 } else {
-                    console.log('\nKEY_EXCHANGE_FINALIZE_REQ:', data);
+                    console.log('KEY_EXCHANGE_FINALIZE_REQ:', data);
                     resolve(body);
                 }
             });
         });
     }
 
-    keyExchangeFinalRes(cpAddress, cpIP){
-        let status = this.map.get(cpAddress);
+    keyExchangeFinalRes(cp){
+        let status = this.map.get(cp.myAddress);
+        if( !status && status.stage != "init"){throw "stage error";}
+        this.checkTS(cp);
         let secret = status.myCrpto.computeSecret(status.cpPK, 'hex', 'hex');
         status["stage"] = "final";
         status["secret"] = secret;
-        this.map.set(cpAddress, status);
+        this.map.set(cp.myAddress, status);
 
         let data = {
             "stage": "keyExchangeFinal",
             "myAddress": this.address,
             "myIP": this.ip,
-            "message": "Successfully generate the session key"
+            "myApiPort": this.apiPort,
+            "message": "Successfully generate the session key",
+            "TS": Date.now().toString()
         };
-        console.log('\nKEY_EXCHANGE_FINALIZE_RES:', data);
+        console.log('KEY_EXCHANGE_FINALIZE_RES:', data);
         return data;
     }
 
-    async keyExchangeChallengeReq(cpAddress, cpIP){
+    async keyExchangeChallengeReq(cp){
         let self = this;
         return new Promise(function (resolve, reject) {
+            let status = self.map.get(cp.myAddress);
+            if( !status && status.stage != "final"){throw "stage error";}
+            self.checkTS(cp);
             let challenge = crypto.randomBytes(16).toString('hex');
-            let TS = Date.now() 
-            let status = self.map.get(cpAddress);
             let buff = Buffer.from(status.secret, 'hex');
             let cipher = crypto.createCipheriv(self.AES_ALG, buff, self.iv)
-            let encrypted = cipher.update(challenge+TS,'utf8','hex')
+            let encrypted = cipher.update(challenge,'utf8','hex')
             encrypted += cipher.final('hex');
             let data = {
                 "stage": "keyExchangeChallenge",
                 "myAddress": self.address,
                 "myIP": self.ip,
-                "encrypted": encrypted
+                "myApiPort": self.apiPort,
+                "encrypted": encrypted,
+                "TS": Date.now().toString()
             };
+            data.hash = crypto.createHash('sha256').update(JSON.stringify(data)+self.salt).copy().digest('hex');
             
             request({
                 method: 'POST',
-                uri: cpIP+"/keyExchangeChallenge",
+                uri: "http://" + cp.myIP + ":" + cp.myApiPort + "/keyExchangeChallenge",
                 json: true,
                 headers: {"content-type": "application/json"},
                 body: data
             },
             function (error, response, body) {
                 if (error) {
-                    console.log('\nKEY_EXCHANGE_CHALLENGE_REQ:', error);
+                    console.log('KEY_EXCHANGE_CHALLENGE_REQ:', error);
                     console.log('--------------------------');
+                    self.map.set(cp.myAddress, {});
                     reject(error);
                 } else {
-                    console.log('\nKEY_EXCHANGE_CHALLENGE_REQ:', data);
+                    console.log('KEY_EXCHANGE_CHALLENGE_REQ:', data);
                     console.log('Challenge:',challenge);
                     console.log('Response:',body.decrypted);
                     if (challenge === body.decrypted){
-                        let status = self.map.get(cpAddress);
+                        self.checkTS(body);
+                        let status = self.map.get(cp.myAddress);
                         status["stage"] = "ok";
-                        status["pov"] = Date.now() + 60*60*1000; // 1 hour
-                        self.map.set(cpAddress, status);
+                        status["pov"] = Date.now() + self.POV_TIME;
+                        self.map.set(cp.myAddress, status);
                         console.log('Successfully have a secure Channel!');
                         console.log('--------------------------');
                     }
@@ -236,43 +276,41 @@ class SecureChannel {
         });
     }
 
-    keyExchangeChallengeRes(cpAddress, cpIP, encrypted) {
-        let status = this.map.get(cpAddress);
+    keyExchangeChallengeRes(cp) {
+        let status = this.map.get(cp.myAddress);
+        if( !status && status.stage != "final"){throw "stage error";}
+        this.checkHash(cp);
+        this.checkTS(cp);
         let buff = Buffer.from(status.secret, 'hex');
         let decipher = crypto.createDecipheriv(this.AES_ALG, buff, this.iv)
-        let decrypted = decipher.update(encrypted,'hex','utf8')
+        let decrypted = decipher.update(cp.encrypted,'hex','utf8')
         decrypted += decipher.final('utf8');
-        let challenge = decrypted.substring(0,32);
-        let TS = decrypted.substring(32);
-        let data = {};
-        
-        if (parseInt(TS) && parseInt(TS)+5000 > Date.now()){
-            let status = this.map.get(cpAddress);
-            status["stage"] = "ok";
-            status["pov"] = Date.now() + 60*60*1000; //1 hour
-            this.map.set(cpAddress, status);
 
-            data = {
-                "stage": "keyExchangeChallenge",
-                "myAddress": this.address,
-                "myIP": this.ip,
-                "decrypted": challenge
-            };
-            console.log("\nGet Challenge:", encrypted);
-            console.log("Decrypted:", challenge, "-", TS);
-            console.log('KEY_EXCHANGE_CHALLENGE_RES:', data)
-            console.log('Successfully have a secure Channel!');
-            console.log('--------------------------');
-        }
+        status["stage"] = "ok";
+        status["pov"] = Date.now() + this.POV_TIME;
+        this.map.set(cp.myAddress, status);
+
+        let data = {
+            "stage": "keyExchangeChallenge",
+            "myAddress": this.address,
+            "myIP": this.ip,
+            "decrypted": decrypted,
+            "TS": Date.now().toString()
+        };
+        console.log("Get Challenge:", cp.encrypted);
+        console.log("Decrypted:", decrypted);
+        console.log('KEY_EXCHANGE_CHALLENGE_RES:', data)
+        console.log('Successfully have a secure Channel!');
+        console.log('--------------------------');
         return data;
     }
 
-    async buildSecureChannel(cpAddress, cpIP){
+    async buildSecureChannel(cpAddress, cpIP, cpApiPort){
         let body;
-        body = await this.keyExchangeInitReq(cpAddress, cpIP)
-        body = await this.keyExchangeFinalReq(body.myAddress, body.myIP, body.myPK);
-        body = await this.keyExchangeChallengeReq(body.myAddress, body.myIP);
-        return body;
+        body = await this.keyExchangeInitReq(cpAddress, cpIP, cpApiPort)
+        body = await this.keyExchangeFinalReq(body);
+        body = await this.keyExchangeChallengeReq(body);
+        return body; 
     }
 }
 

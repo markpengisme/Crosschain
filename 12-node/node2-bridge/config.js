@@ -5,10 +5,10 @@ config.contractNames = ["SendInfo","BridgeNode"]; // if has many contract, need 
 
 // Name, IP, Address, ChainID, port
 config.myName = 'CareCenter-BridgeNode-One';
-config.myIP = 'http://localhost:3002';
+config.myIP = '127.0.0.1';
+config.myApiPort = '3002';
 config.myAccountAddress = '0xa93278ed1977727474ccd5b0d4ac313037d7f8a6'; 
 config.myChainID = '7545';
-config.myPort = 3002;
 config.relayChainID = '8545';
 
 // web3 provider

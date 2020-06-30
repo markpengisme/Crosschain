@@ -21,9 +21,10 @@ config.contractNames.forEach( contractName => {
 // Name, IP, Address, chainID, port
 const myName = config.myName;
 const myIP = config.myIP;
+const myApiPort = config.myApiPort;
 const myAccountAddress = config.myAccountAddress;
 const myChainID = config.myChainID;
-const myPort = config.myPort;
+let nodeList = [];
 
 // web3 & contract instance
     // http: send transaction
@@ -35,16 +36,53 @@ const sendInfoContractWs = new ws.eth.Contract(contracts[0].abi, contracts[0].ad
 const bridgeNodeContractHttp = new http.eth.Contract(contracts[1].abi, contracts[1].address);
 const bridgeNodeContractWs = new ws.eth.Contract(contracts[1].abi, contracts[1].address);
 
-async function oneBridgeNode(ts, myChainID)
+async function randomBridgeNode(ts, chainID)
 {
     let node;
-    await bridgeNodeContractHttp.methods.oneBridgeNode(ts, myChainID)
+    await bridgeNodeContractHttp.methods.randomBridgeNode(ts, chainID)
     .call({from: myAccountAddress})
     .then(function(result) {
         node = result;  
     });
     return node;
 }
+async function getNodeList(chainID)
+{
+    let count = 0;
+    let list = [];
+    await bridgeNodeContractHttp.methods.getChainIDToBridgeNodeCount(chainID)
+    .call({from: myAccountAddress})
+    .then(function(result) {
+        count = result;  
+    });
+
+    for(let i = 0; i < count; i++) { 
+        await bridgeNodeContractHttp.methods.oneBridgeNode(i, chainID)
+        .call({from: myAccountAddress})
+        .then(function(result) {
+            list.push(result);
+        });
+    }
+    return list;
+}
+async function checkIP(ip, nodeList)
+{
+    return new Promise(function (resolve, reject) {
+        for(let i = 0; i < nodeList.length; i++) { 
+            if (nodeList[i].ip == ip){
+                console.log("\nIP is allowed")
+                return resolve(undefined);
+            }
+        }
+        return reject("\nError: IP is not allowed");
+    });
+}
+
+ws.eth.net.isListening()
+.then(async () => {
+    console.log("Update ip list");
+    nodeList = await getNodeList(myChainID);
+});
 
 // 開始監聽合約事件
 console.log('start to listen!');
@@ -71,9 +109,10 @@ router = express.Router();
 // 跨鏈回覆 by API -> send response contract
 router.post("/", async function (req, res, next) {
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         let data = req.body;
         if (data == undefined){throw "Error:data == undefined";}
-        const workerNode = await oneBridgeNode(Date.now().toString(), myChainID);
+        const workerNode = await randomBridgeNode(Date.now().toString(), myChainID);
         data.workerNode = workerNode.accAddress;
         
         console.log("Call Contract!")
@@ -94,7 +133,7 @@ router.post("/", async function (req, res, next) {
 const app = express();
 app.use(bodyParser.json());
 app.use(router);
-app.listen(myPort, function () {
+app.listen(myApiPort, myIP, function () {
     console.log('Express app started:', myIP);
-    console.log('Hospital Name:', myName, '\n');
+    console.log('Hospital name:', myName, '\n');
 });
