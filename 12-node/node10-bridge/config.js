@@ -5,8 +5,9 @@ config.contractNames = ["SendInfo","BridgeNode"]; // if has many contract, need 
 
 // Name, IP, Address, ChainID, port
 config.myName = 'Hospital-BridgeNode-Two';
-config.myIP = 'http://localhost:3010';
-config.myAccountAddress = '0x8bf842ad24254af5d39a913cc87238f4b3510dda'; 
+config.myIP = '127.0.0.1';
+config.myApiPort = '3010';
+config.myAccountAddress = '0xfe98d6e761e11e9752b08c655910256899bf366a'; 
 config.myChainID = '9545';
 config.myPort = 3010;
 config.relayChainID = '8545';

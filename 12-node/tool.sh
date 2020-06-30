@@ -4,11 +4,16 @@
 # 1. Compile node2, node6, node10 smart contracts, and distribute to other node in same chain.
 # 2. Initiate node data in three chain by `init-node.js` in node2, node6, node10.
 
+# My BridgeNode.sol are all same so
+cp ./node2-bridge/contracts/BridgeNode.sol ./node6-bridge/contracts/BridgeNode.sol
+cp ./node2-bridge/contracts/BridgeNode.sol ./node10-bridge/contracts/BridgeNode.sol
+
+# Compile
 cd node2-bridge && node compile.js && cd ..
 cd node6-bridge && node compile.js && cd ..
 cd node10-bridge && node compile.js && cd ..
 
-# SendInfo contract & BridgeNode Contract
+# Distribute SendInfo contract & BridgeNode Contract
 cp ./node2-bridge/contracts/SendInfo.sol ./node1-client/contracts/SendInfo.sol
 cp ./node2-bridge/contracts/SendInfo.json ./node1-client/contracts/SendInfo.json
 cp ./node2-bridge/contracts/SendInfo.sol ./node3-bridge/contracts/SendInfo.sol

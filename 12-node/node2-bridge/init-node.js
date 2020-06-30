@@ -9,14 +9,14 @@ const bridgeNodeContractHttp = new http.eth.Contract(compiled.abi,compiled.contr
 const myAccountAddress = config.myAccountAddress;
 (async () => {
     try{
-        await bridgeNodeContractHttp.methods.registerBridgeNode("CareCenter-BridgeNode-One", "http://localhost:3002", "0x149f65589a0a295896f997c1e7764b6cb2d4f1b4", "7545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("CareCenter-BridgeNode-Two", "http://localhost:3003", "0xaf818e490f563f652f1a5a3e3a84bea9b68fc8e2", "7545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("CareCenter-BridgeNode-Three", "http://localhost:3004", "0x33c080ec045337ce4c2e82d2be7737c39147c700", "7545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("CareCenter-BridgeNode-One", "127.0.0.1", "3002", "0xa93278ed1977727474ccd5b0d4ac313037d7f8a6", "7545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("CareCenter-BridgeNode-Two", "127.0.0.1", "3003", "0x281c5cb496a751305b0dd7907320ee55836095c6", "7545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("CareCenter-BridgeNode-Three", "127.0.0.1", "3004", "0x406986b7f121e58453cff9950a27e75ba9d8ea82", "7545").send({from: myAccountAddress});
         
-        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-One", "http://localhost:3005", "0x6ca59ef72aea163bcd87239edb673fb0293d4e40", "8545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Two", "http://localhost:3006", "0x0e66d201fbc294d0163b26153e32a050bc4be92e", "8545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Three", "http://localhost:3007", "0xc17be0b0812eb0d05ec44d6e154267fe481fb1d0", "8545").send({from: myAccountAddress});
-        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Four", "http://localhost:3008", "0x6287b6af7454f63dabdacf68bd76d2936e242f51", "8545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-One", "127.0.0.1", "3005", "0xb6b724877f84a630a0a9bff1aa4093b1acb37316", "8545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Two", "127.0.0.1", "3006", "0x1f33e7167f2938d80408f4c3d3507c927877b350", "8545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Three", "127.0.0.1", "3007", "0x89326c9b03e4ebee6fadcad18c8e98a4e7033f8c", "8545").send({from: myAccountAddress});
+        await bridgeNodeContractHttp.methods.registerBridgeNode("RelayChain-BridgeNode-Four", "127.0.0.1", "3008", "0x18e6b9f7d93ebd4d46ad993638a2a51c3d8d168b", "8545").send({from: myAccountAddress});
         console.log("Initiate success");
     } catch (error){
         console.log(error);

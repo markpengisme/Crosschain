@@ -1,4 +1,4 @@
-# 子三 - v2.1
+# 子三 - v2.1.1
 
 ## How to use?
 
@@ -9,10 +9,11 @@
 	- `Crosschain/network/Hospital/config.json`
 3. After set up, quorum wizard will generate `start.sh` & `stop.sh` to control blockchain.
 4. Use `package.json` in every node to install npm module,command: `npm install`.
-5. Use `tool.sh` to do
+5. Set up your `config.js` in node1 ~ node12, and `init-node.js` in node2, node6, node10.
+6. Use `tool.sh` to do
 	- Compile node2, node6, node10 smart contracts, and distribute to other node in same chain.
 	- Initiate node data in three chain by `init-node.js` in node2, node6, node10.
-6. Set up your `config.js` in node1 ~ node12.
+
 7. Start up all the node.
 8. Use postman to import `cross-chain.postman_collection.json`, and test crosschain function by those POST request.
 
@@ -51,11 +52,13 @@
 - V2.1
 	- Secure channel
 		- A secure channel between the bridge nodes of two different chains(ECDH(secp256k1) -> AES(aes-256-cbc))
+- V2.1.1
+	- Check request ip, timestamp, hash
 
 ## Future Tasks
 
-- More Secure channels
-	- Check request ip
 - Refactor code to OOP
+- Error handling
 - Dynamic Deploy Bridge nodes
-	- k8s stafulset
+	- k8s statefulset
+- Relay chain check ip more efficient way

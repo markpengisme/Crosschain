@@ -5,10 +5,11 @@ config.contractNames = ["SendInfo","BridgeNode"]; // if has many contract, need 
 
 // Name, IP, Address, ChainID, port
 config.myName = 'RelayChain-BridgeNode-Three';
-config.myIP = 'http://localhost:3007';
-config.myAccountAddress = '0xc17be0b0812eb0d05ec44d6e154267fe481fb1d0'; 
+config.myIP = '127.0.0.1';
+config.myApiPort = '3007';
+config.myAccountAddress = '0x89326c9b03e4ebee6fadcad18c8e98a4e7033f8c'; 
 config.myChainID = '8545';
-config.myPort = 3007;
+config.childChainID = ['7545','9545'];
 
 // web3 provider
 config.web3HttpProvider = 'http://localhost:32002'; //rpc port

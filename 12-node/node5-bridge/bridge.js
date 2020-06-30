@@ -22,10 +22,12 @@ config.contractNames.forEach( contractName => {
 // Name, IP, Address, ChainID, port
 const myName = config.myName;
 const myIP = config.myIP;
+const myApiPort = config.myApiPort;
 const myAccountAddress = config.myAccountAddress;
 const myChainID = config.myChainID;
-const myPort = config.myPort;
-sc = new SecureChannel(myAccountAddress, myIP);
+const childChainID = config.childChainID;
+let nodeList = [];
+sc = new SecureChannel(myAccountAddress, myIP, myApiPort);
 
 // web3 & contract instance
     // http: send transaction
@@ -47,22 +49,61 @@ async function namingService(name)
     });
     return chainID;
 }
-
-async function oneBridgeNode(ts, myChainID)
+async function randomBridgeNode(ts, chainID)
 {
     let node;
-    await bridgeNodeContractHttp.methods.oneBridgeNode(ts, myChainID)
+    await bridgeNodeContractHttp.methods.randomBridgeNode(ts, chainID)
     .call({from: myAccountAddress})
     .then(function(result) {
         node = result;  
     });
     return node;
 }
+async function getNodeList(chainID)
+{
+    let count = 0;
+    let list = [];
+    await bridgeNodeContractHttp.methods.getChainIDToBridgeNodeCount(chainID)
+    .call({from: myAccountAddress})
+    .then(function(result) {
+        count = result;  
+    });
+
+    for(let i = 0; i < count; i++) { 
+        await bridgeNodeContractHttp.methods.oneBridgeNode(i, chainID)
+        .call({from: myAccountAddress})
+        .then(function(result) {
+            list.push(result);
+        });
+    }
+    return list;
+}
+async function checkIP(ip, nodeList)
+{
+    return new Promise(function (resolve, reject) {
+        for(let i = 0; i < nodeList.length; i++) { 
+            if (nodeList[i].ip == ip){
+                console.log("\nIP is allowed")
+                return resolve(undefined);
+            }
+        }
+        return reject("\nError: IP is not allowed");
+    });
+}
+
+ws.eth.net.isListening()
+.then(async () => {
+    console.log("Update ip list");
+    for(let i = 0; i < 2; i++) { 
+        nodeList = nodeList.concat(await getNodeList(childChainID[i]));
+    }
+})
 
 router = express.Router();
 // 跨鏈請求/回覆 by API -> send contract
 router.post("/", async function (req, res, next) { 
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         // 解密
         let body = req.body;
         let data = JSON.parse(sc.decrypt(body.myAccountAddress, body.data));
@@ -86,19 +127,19 @@ router.post("/", async function (req, res, next) {
                 let destChainID = data.to;
                 delete data.from;
                 delete data.to;
-                const workerNode = await oneBridgeNode(Date.now().toString(), destChainID);
+                const workerNode = await randomBridgeNode(Date.now().toString(), destChainID);
                 data.workerNode = workerNode.accAddress;
                 console.log("Child chain workerNode:", data.workerNode);
 
                 // 加密
-                let ok = await sc.checkStatus(workerNode.accAddress, workerNode.ip);
-                if(!ok){await sc.buildSecureChannel(workerNode.accAddress, workerNode.ip)}
+                let ok = await sc.checkStatus(workerNode.accAddress, workerNode.ip, workerNode.apiPort);
+                if(!ok){throw "secure channel can't build"};
                 data = sc.encrypt(workerNode.accAddress, JSON.stringify(data))
                 data = {"data":data, "myAccountAddress": myAccountAddress}
 
                 request({
                     method: 'POST',
-                    uri: workerNode.ip,
+                    uri: "http://" + workerNode.ip + ":" + workerNode.apiPort,
                     json: true,
                     headers: {
                         "content-type": "application/json",
@@ -123,10 +164,11 @@ router.post("/", async function (req, res, next) {
     }
 });
 
-router.post("/keyExchangeInit", function (req, res, next) {
+router.post("/keyExchangeInit", async function (req, res, next) {
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         let data = req.body;
-        data = sc.keyExchangeInitRes(data.myAddress, data.myIP, data.myPK);
+        data = sc.keyExchangeInitRes(data);
         res.json(data);    
     } catch (error){
         console.log(error);
@@ -134,10 +176,11 @@ router.post("/keyExchangeInit", function (req, res, next) {
     }
 });
 
-router.post("/keyExchangeFinal", function (req, res, next) {
+router.post("/keyExchangeFinal", async function (req, res, next) {
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         let data = req.body;
-        data = sc.keyExchangeFinalRes(data.myAddress, data.myIP);
+        data = sc.keyExchangeFinalRes(data);
         res.json(data);
     } catch (error){
         console.log(error);
@@ -145,10 +188,11 @@ router.post("/keyExchangeFinal", function (req, res, next) {
     }
 });
 
-router.post("/keyExchangeChallenge", function (req, res, next) {
+router.post("/keyExchangeChallenge", async function (req, res, next) {
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         let data = req.body;
-        data = sc.keyExchangeChallengeRes(data.myAddress, data.myIP, data.encrypted);
+        data = sc.keyExchangeChallengeRes(data);
         res.json(data);
     } catch (error){
         console.log(error);
@@ -159,7 +203,7 @@ router.post("/keyExchangeChallenge", function (req, res, next) {
 const app = express();
 app.use(bodyParser.json());
 app.use(router);
-app.listen(myPort, function () {
+app.listen(myApiPort, myIP, function () {
     console.log('Express app started:', myIP);
     console.log('RelayChain node name:', myName, '\n');
 });

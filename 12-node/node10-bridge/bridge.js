@@ -22,11 +22,12 @@ config.contractNames.forEach( contractName => {
 // Name, IP, Address, ChainID, port
 const myName = config.myName;
 const myIP = config.myIP;
+const myApiPort = config.myApiPort;
 const myAccountAddress = config.myAccountAddress;
 const myChainID = config.myChainID;
-const myPort = config.myPort;
 const relayChainID = config.relayChainID;
-sc = new SecureChannel(myAccountAddress, myIP);
+let nodeList = [];
+sc = new SecureChannel(myAccountAddress, myIP, myApiPort);
 
 // web3 & contract instance
     // http: send transaction
@@ -38,69 +39,112 @@ const sendInfoContractWs = new ws.eth.Contract(contracts[0].abi, contracts[0].ad
 const bridgeNodeContractHttp = new http.eth.Contract(contracts[1].abi, contracts[1].address);
 const bridgeNodeContractWs = new ws.eth.Contract(contracts[1].abi, contracts[1].address);
 
-async function oneBridgeNode(ts, myChainID)
+async function randomBridgeNode(ts, chainID)
 {
     let node;
-    await bridgeNodeContractHttp.methods.oneBridgeNode(ts, myChainID)
+    await bridgeNodeContractHttp.methods.randomBridgeNode(ts, chainID)
     .call({from: myAccountAddress})
     .then(function(result) {
         node = result;  
     });
     return node;
 }
+async function getNodeList(chainID)
+{
+    let count = 0;
+    let list = [];
+    await bridgeNodeContractHttp.methods.getChainIDToBridgeNodeCount(chainID)
+    .call({from: myAccountAddress})
+    .then(function(result) {
+        count = result;  
+    });
+
+    for(let i = 0; i < count; i++) { 
+        await bridgeNodeContractHttp.methods.oneBridgeNode(i, chainID)
+        .call({from: myAccountAddress})
+        .then(function(result) {
+            list.push(result);
+        });
+    }
+    return list;
+}
+async function checkIP(ip, nodeList)
+{
+    return new Promise(function (resolve, reject) {
+        for(let i = 0; i < nodeList.length; i++) { 
+            if (nodeList[i].ip == ip){
+                console.log("\nIP is allowed")
+                return resolve(undefined);
+            }
+        }
+        return reject("\nError: IP is not allowed");
+    });
+}
+
+ws.eth.net.isListening()
+.then(async () => {
+    console.log("Update ip list");
+    nodeList = await getNodeList(relayChainID);
+});
 
 // 開始監聽合約事件
 console.log('start to listen!');
 // 跨鏈回覆 by listen contract event -> call API
 sendInfoContractWs.events.infoEvent({}, async function (error, result) {
-    if (error === null) {
-        // 監聽器拿到資料
-        console.log('Listen to event successfully!');
-        let data = result.returnValues.data;
-        data = JSON.parse(data);
-        
-        // 拿到的節點編號剛好是自己的節點編號,代表該工作
-        if (data['workerNode'] === myAccountAddress) {
-            const workerNode = await oneBridgeNode(Date.now().toString(), relayChainID);
-            data.workerNode = workerNode.accAddress;
-            console.log("Relay chain workerNode:", data.workerNode);
+    try {
+        if (error === null) {
+            // 監聽器拿到資料
+            console.log('Listen to event successfully!');
+            let data = result.returnValues.data;
+            data = JSON.parse(data);
+            
+            // 拿到的節點編號剛好是自己的節點編號,代表該工作
+            if (data['workerNode'] === myAccountAddress) {
+                console.log("Get a job");
+                const workerNode = await randomBridgeNode(Date.now().toString(), relayChainID);
+                data.workerNode = workerNode.accAddress;
+                console.log("Relay chain workerNode:", data.workerNode);
 
-            // 加密
-            let ok = await sc.checkStatus(workerNode.accAddress, workerNode.ip);
-            if(!ok){await sc.buildSecureChannel(workerNode.accAddress, workerNode.ip)}
-            data = sc.encrypt(workerNode.accAddress, JSON.stringify(data))
-            data = {"data":data, "myAccountAddress": myAccountAddress}
+                // 加密
+                let ok = await sc.checkStatus(workerNode.accAddress, workerNode.ip, workerNode.apiPort);
+                if(!ok){throw "secure channel can't build"};
+                data = sc.encrypt(workerNode.accAddress, JSON.stringify(data))
+                data = {"data":data, "myAccountAddress": myAccountAddress}
 
-            // 將資料轉發給relayChain的橋接節點
-            request({
-                    method: 'POST',
-                    uri: workerNode.ip,
-                    json: true,
-                    headers: {
-                        "content-type": "application/json",
+                // 將資料轉發給relayChain的橋接節點
+                request({
+                        method: 'POST',
+                        uri: "http://" + workerNode.ip + ":" + workerNode.apiPort,
+                        json: true,
+                        headers: {
+                            "content-type": "application/json",
+                        },
+                        body: data
                     },
-                    body: data
-                },
-                // callback回來確認是否成功轉送給relayChain的橋接節點
-                function (error, response, body) {
-                    if (error) {
-                        console.log('Send to relaychain bridgenode failed:', error, "\n");
-                    } else {
-                        console.log('Send to relaychain bridgenode successfully! Server responded with:', body, "\n");
-                    }
-                })
+                    // callback回來確認是否成功轉送給relayChain的橋接節點
+                    function (error, response, body) {
+                        if (error) {
+                            console.log('Send to relaychain bridgenode failed:', error, "\n");
+                        } else {
+                            console.log('Send to relaychain bridgenode successfully! Server responded with:', body, "\n");
+                        }
+                    })
+            } else {
+                console.log('Not my job....')
+            }
         } else {
-            console.log('Not my job....\n')
+            console.log('listen error:', error)
         }
-    } else {
-        console.log('listen error:', error)
+    } catch (error) {
+        console.log('Error:', error);
     }
 });
 
 router = express.Router();
 // 跨鏈請求 by API -> send contract
-router.post("/", function (req, res, next) {
+router.post("/", async function (req, res, next) {
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         // 解密
         let body = req.body;
         let data = JSON.parse(sc.decrypt(body.myAccountAddress, body.data));
@@ -123,10 +167,11 @@ router.post("/", function (req, res, next) {
     }
 });
 
-router.post("/keyExchangeInit", function (req, res, next) {
+router.post("/keyExchangeInit", async function (req, res, next) {
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         let data = req.body;
-        data = sc.keyExchangeInitRes(data.myAddress, data.myIP, data.myPK);
+        data = sc.keyExchangeInitRes(data);
         res.json(data);    
     } catch (error){
         console.log(error);
@@ -134,10 +179,11 @@ router.post("/keyExchangeInit", function (req, res, next) {
     }
 });
 
-router.post("/keyExchangeFinal", function (req, res, next) {
+router.post("/keyExchangeFinal", async function (req, res, next) {
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         let data = req.body;
-        data = sc.keyExchangeFinalRes(data.myAddress, data.myIP);
+        data = sc.keyExchangeFinalRes(data);
         res.json(data);
     } catch (error){
         console.log(error);
@@ -145,10 +191,11 @@ router.post("/keyExchangeFinal", function (req, res, next) {
     }
 });
 
-router.post("/keyExchangeChallenge", function (req, res, next) {
+router.post("/keyExchangeChallenge", async function (req, res, next) {
     try{
+        await checkIP(req.connection.remoteAddress, nodeList);
         let data = req.body;
-        data = sc.keyExchangeChallengeRes(data.myAddress, data.myIP, data.encrypted);
+        data = sc.keyExchangeChallengeRes(data);
         res.json(data);
     } catch (error){
         console.log(error);
@@ -159,7 +206,7 @@ router.post("/keyExchangeChallenge", function (req, res, next) {
 const app = express();
 app.use(bodyParser.json());
 app.use(router);
-app.listen(myPort, function () {
+app.listen(myApiPort, myIP, function () {
     console.log('Express app started:', myIP);
     console.log('Hospital name:', myName, '\n');
 });
