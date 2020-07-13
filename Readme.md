@@ -62,3 +62,4 @@
 - Dynamic Deploy Bridge nodes
 	- k8s statefulset
 - Relay chain check ip more efficient way
+- encrypted / decrypted + ip timestamp hashs

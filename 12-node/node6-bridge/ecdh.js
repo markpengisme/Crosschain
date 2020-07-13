@@ -70,15 +70,22 @@ class SecureChannel {
         let encrypted = cipher.update(data,'utf8','hex')
         encrypted += cipher.final('hex');
         console.log("Successfully encrypted:",encrypted);
-        return encrypted;
+        data = {
+            "encrypted": encrypted,
+            "TS": Date.now().toString()      
+        };
+        data.hash = crypto.createHash('sha256').update(JSON.stringify(data)+this.salt).copy().digest('hex');
+        return data;
     }
 
-    decrypt (cpAddress, encrypted) {
+    decrypt (cpAddress, data) {
         let status = this.map.get(cpAddress);
         let buff = Buffer.from(status.secret, 'hex');
         if(this.BUILD_SECURE_CHANNEL_EVERYTIME){this.map.set(cpAddress, {});}
+        this.checkHash(data);
+        this.checkTS(data);
         let decipher = crypto.createDecipheriv(this.AES_ALG, buff, this.iv)
-        let data = decipher.update(encrypted,'hex','utf8')
+        data = decipher.update(data.encrypted,'hex','utf8')
         data += decipher.final('utf8');
         console.log("Successfully decrypted:",data);
         return data;
