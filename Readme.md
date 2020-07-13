@@ -54,7 +54,10 @@
 		- A secure channel between the bridge nodes of two different chains(ECDH(secp256k1) -> AES(aes-256-cbc))
 - V2.1.1
 	- Check request ip, timestamp, hash
-
+- V2.1.2
+	- add check hash and salt when encrypt and decrypt
+	
+	
 ## Future Tasks
 
 - Refactor code to OOP
@@ -62,4 +65,9 @@
 - Dynamic Deploy Bridge nodes
 	- k8s statefulset
 - Relay chain check ip more efficient way
-- encrypted / decrypted + ip timestamp hashs
+
+## Research
+
+- Consider removing unnecessary validation steps from the ECDH process to impove efficiency
+- Shared system parameters `salt` affects deniability and the possibility of spies in the same chain must be taken into account.
+- Whether `TLS1.3` is more suitable
